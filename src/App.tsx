@@ -68,7 +68,7 @@ function App() {
   const hasSplitGoals = splitGoals.length > 0;
 
   return (
-    <div className="h-screen w-screen flex bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden" ref={containerRef}>
+    <div className="relative h-screen w-screen flex bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden" ref={containerRef}>
       {/* Left Sidebar - Fixed */}
       <LeftSidebar />
 
@@ -79,12 +79,25 @@ function App() {
           
           {/* Resizer - 可拖拽分隔条 */}
           <div
-            className="w-1 hover:w-2 bg-transparent hover:bg-blue-400/50 cursor-col-resize transition-all duration-150 z-10"
+            className="absolute z-20 cursor-col-resize group"
             onMouseDown={handleResizeStart}
-            style={{ 
-              backgroundColor: isResizing ? 'rgba(96, 165, 250, 0.5)' : undefined 
+            style={{
+              left: `${220 + middlePanelWidth}px`,
+              width: '6px',
+              height: '100%',
+              transform: 'translateX(-50%)',
             }}
-          />
+          >
+            {/* 视觉线条 - 悬浮时显示 */}
+            <div 
+              className={`
+                absolute top-0 bottom-0 left-1/2 -translate-x-1/2
+                w-[2px] bg-blue-500/30 opacity-0 group-hover:opacity-100
+                transition-opacity duration-150
+                ${isResizing ? 'opacity-100' : ''}
+              `}
+            />
+          </div>
         </>
       )}
 
