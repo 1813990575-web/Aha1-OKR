@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useGoalStore } from './store/goalStore';
+import { TimerProvider } from './components/Timer/TimerProvider';
 import { LeftSidebar } from './components/LeftSidebar';
 import { MiddlePanel } from './components/MiddlePanel';
 import { RightPanel } from './components/RightPanel';
@@ -68,42 +69,44 @@ function App() {
   const hasSplitGoals = splitGoals.length > 0;
 
   return (
-    <div className="relative h-screen w-screen flex bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden" ref={containerRef}>
-      {/* Left Sidebar - Fixed */}
-      <LeftSidebar />
+    <TimerProvider>
+      <div className="relative h-screen w-screen flex bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden" ref={containerRef}>
+        {/* Left Sidebar - Fixed */}
+        <LeftSidebar />
 
-      {/* Middle Panel - 动态宽度 */}
-      {hasSplitGoals && (
-        <>
-          <MiddlePanel width={middlePanelWidth} />
-          
-          {/* Resizer - 可拖拽分隔条 */}
-          <div
-            className="absolute z-20 cursor-col-resize group"
-            onMouseDown={handleResizeStart}
-            style={{
-              left: `${220 + middlePanelWidth}px`,
-              width: '6px',
-              height: '100%',
-              transform: 'translateX(-50%)',
-            }}
-          >
-            {/* 视觉线条 - 悬浮时显示 */}
-            <div 
-              className={`
-                absolute top-0 bottom-0 left-1/2 -translate-x-1/2
-                w-[2px] bg-blue-500/30 opacity-0 group-hover:opacity-100
-                transition-opacity duration-150
-                ${isResizing ? 'opacity-100' : ''}
-              `}
-            />
-          </div>
-        </>
-      )}
+        {/* Middle Panel - 动态宽度 */}
+        {hasSplitGoals && (
+          <>
+            <MiddlePanel width={middlePanelWidth} />
+            
+            {/* Resizer - 可拖拽分隔条 */}
+            <div
+              className="absolute z-20 cursor-col-resize group"
+              onMouseDown={handleResizeStart}
+              style={{
+                left: `${220 + middlePanelWidth}px`,
+                width: '6px',
+                height: '100%',
+                transform: 'translateX(-50%)',
+              }}
+            >
+              {/* 视觉线条 - 悬浮时显示 */}
+              <div 
+                className={`
+                  absolute top-0 bottom-0 left-1/2 -translate-x-1/2
+                  w-[2px] bg-blue-500/30 opacity-0 group-hover:opacity-100
+                  transition-opacity duration-150
+                  ${isResizing ? 'opacity-100' : ''}
+                `}
+              />
+            </div>
+          </>
+        )}
 
-      {/* Right Panel - Main workspace */}
-      <RightPanel />
-    </div>
+        {/* Right Panel - Main workspace */}
+        <RightPanel />
+      </div>
+    </TimerProvider>
   );
 }
 
