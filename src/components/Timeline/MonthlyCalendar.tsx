@@ -55,16 +55,56 @@ export function MonthlyCalendar({ selectedDate, onDateSelect }: MonthlyCalendarP
     }
   };
 
+  // 切换到上一个月
+  const handlePrevMonth = () => {
+    if (onDateSelect) {
+      const newDate = new Date(selectedDate);
+      newDate.setMonth(newDate.getMonth() - 1);
+      onDateSelect(newDate);
+    }
+  };
+
+  // 切换到下一个月
+  const handleNextMonth = () => {
+    if (onDateSelect) {
+      const newDate = new Date(selectedDate);
+      newDate.setMonth(newDate.getMonth() + 1);
+      onDateSelect(newDate);
+    }
+  };
+
   return (
     <div className="px-3 py-2">
-      {/* 月份标题 - 带剩余天数 */}
+      {/* 月份标题 - 剩余天数紧跟标题 */}
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[11px] font-medium text-stone-500">
-          {selectedDate.getFullYear()}年{selectedDate.getMonth() + 1}月
-        </span>
-        <span className="text-[11px] text-stone-400">
-          剩 {daysRemaining} 天
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] font-medium text-stone-500">
+            {selectedDate.getFullYear()}年{selectedDate.getMonth() + 1}月
+          </span>
+          <span className="text-[11px] text-stone-400">
+            剩 {daysRemaining} 天
+          </span>
+        </div>
+        
+        {/* 月份切换按钮 */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={handlePrevMonth}
+            className="w-5 h-5 flex items-center justify-center rounded hover:bg-stone-100 transition-colors"
+          >
+            <svg className="w-3 h-3 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <button
+            onClick={handleNextMonth}
+            className="w-5 h-5 flex items-center justify-center rounded hover:bg-stone-100 transition-colors"
+          >
+            <svg className="w-3 h-3 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* 星期标题 - 极小字号 */}
@@ -96,10 +136,10 @@ export function MonthlyCalendar({ selectedDate, onDateSelect }: MonthlyCalendarP
               text-[11px] leading-none
               transition-all duration-150
               ${item.isSelected
-                ? 'bg-stone-700 text-white font-medium rounded-sm'
+                ? 'bg-red-500/20 text-red-700 font-medium rounded-full'
                 : item.isToday
-                  ? 'text-stone-700 font-medium bg-stone-100 rounded-sm'
-                  : 'text-stone-400 hover:text-stone-600 hover:bg-stone-50/50 rounded-sm'
+                  ? 'text-stone-700 font-medium bg-stone-100 rounded-full'
+                  : 'text-stone-400 hover:text-stone-600 hover:bg-stone-50/50 rounded-full'
               }
             `}
           >

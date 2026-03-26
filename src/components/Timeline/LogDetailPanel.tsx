@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useTimelineStore } from '../../store/timelineStore';
 import { useGoalStore } from '../../store/goalStore';
 import { MonthlyCalendar } from './MonthlyCalendar';
+import { formatDuration } from './types';
 
 interface LogDetailPanelProps {
   selectedDate: Date;
@@ -66,10 +67,13 @@ export function LogDetailPanel({ selectedDate, onDateSelect }: LogDetailPanelPro
     }
   }, [note, selectedFocusLog, updateFocusLogNote]);
 
-  // 格式化时长显示（转换为分钟数字）
+  // 格式化时长显示（转换为分钟数字）- 保留此逻辑
   const durationMinutes = selectedFocusLog
     ? Math.round(selectedFocusLog.duration / 60)
     : 0;
+
+  // 保留 formatDuration 所需的 duration 值
+  const duration = selectedFocusLog?.duration || 0;
 
   return (
     <div className="w-[35%] min-w-[280px] max-w-[360px] bg-white/90 backdrop-blur-sm border-l border-stone-200/60 flex flex-col overflow-hidden">
@@ -82,92 +86,51 @@ export function LogDetailPanel({ selectedDate, onDateSelect }: LogDetailPanelPro
       <div className="flex-1 overflow-y-auto">
         {selectedFocusLog ? (
           <>
-            {/* 核心状态卡片：整合专注时长与任务详情 */}
-            <div className="p-4">
-              <div className="bg-white rounded-xl border border-stone-100 shadow-sm p-4">
-                <div className="flex items-center gap-4">
-                  {/* 左侧：专注时长 */}
-                  <div className="flex-shrink-0">
-                    <span className="text-[10px] text-stone-400 uppercase tracking-wider block mb-0.5">
-                      专注时长
-                    </span>
-                    <span className="text-[28px] font-bold text-stone-800 leading-none">
-                      {durationMinutes}
-                      <span className="text-sm font-medium text-stone-500 ml-0.5">分钟</span>
-                    </span>
-                  </div>
-
-                  {/* 分隔线 */}
-                  <div className="w-px h-10 bg-stone-100" />
-
-                  {/* 右侧：目标层级 Tags */}
-                  <div className="flex-1 flex flex-col gap-1.5 min-w-0">
-                    {/* 父目标 Tag */}
-                    {parentGoal && (
-                      <div className="flex items-center gap-1.5">
-                        <span className="px-2 py-0.5 text-[10px] font-medium bg-stone-100 text-stone-500 rounded-full flex-shrink-0">
-                          父目标
-                        </span>
-                        <span className="text-xs text-stone-600 font-medium truncate">
-                          {parentGoal.title}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* 当前任务 Tag */}
-                    <div className="flex items-center gap-1.5">
-                      <span className="px-2 py-0.5 text-[10px] font-medium bg-stone-800 text-white rounded-full flex-shrink-0">
-                        当前任务
-                      </span>
-                      <span className="text-sm text-stone-800 font-semibold truncate">
-                        {childGoal?.title || selectedFocusLog.goalTitle}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 备注编辑区 */}
-            <div className="flex flex-col px-4 pb-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-stone-400 uppercase tracking-wider">备注</span>
-                {isSaving && (
-                  <span className="text-[10px] text-stone-400 flex items-center gap-1">
-                    <svg
-                      className="w-3 h-3 animate-spin"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                    保存中...
-                  </span>
-                )}
-              </div>
+            {/* 备注编辑区 - 整合时长标签和标题 */}
+            <div className="flex flex-col px-4 pt-4 pb-4">
+              {/* 时长标签 */}
+              <span className="px-2 py-0.5 text-[10px] font-medium bg-stone-800 text-white rounded-full w-fit mb-2">
+                {Math.round(duration / 60)}min
+              </span>
+              
+              {/* 标题（原备注标签位置） */}
+              <h3 className="text-sm text-stone-800 font-semibold truncate mb-3">
+                {childGoal?.title || selectedFocusLog.goalTitle}
+              </h3>
+              
+              {isSaving && (
+                <span className="text-[10px] text-stone-400 flex items-center gap-1 mb-2 self-end">
+                  <svg
+                    className="w-3 h-3 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  保存中...
+                </span>
+              )}
 
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 onBlur={handleNoteBlur}
                 placeholder="记录这次专注的感受、成果或想法..."
-                className="w-full p-3 text-sm text-stone-700 bg-stone-50 rounded-xl border border-stone-200/60 resize-none outline-none focus:ring-2 focus:ring-stone-300/50 focus:bg-white transition-all placeholder:text-stone-400"
-                style={{ minHeight: '120px' }}
+                className="w-full p-3 text-sm text-stone-700 bg-stone-50 rounded-xl border border-stone-200/60 resize-none outline-none focus:ring-2 focus:ring-stone-300/50 focus:bg-white transition-all placeholder:text-stone-400 placeholder:text-xs"
+                style={{ minHeight: '280px' }}
               />
-
-              <p className="text-[10px] text-stone-400 mt-2">失去焦点自动保存</p>
             </div>
           </>
         ) : (

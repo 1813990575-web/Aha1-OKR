@@ -1,10 +1,10 @@
 // TimeBlock.tsx - 单个专注任务块的渲染逻辑
 // game rules: 纯展示组件，接收计算好的位置数据，负责渲染和交互
-// 参考 Apple Calendar 风格：即使很短的区块也显示标题和时间
+// 优化短时长色块的文字显示：只显示标题，居中对齐，极小字号
 
 import { useState } from 'react';
 import type { TimeBlockData } from './types';
-import { getBlockColor, formatTime } from './types';
+import { getBlockColor } from './types';
 import { TimeBlockContextMenu } from './TimeBlockContextMenu';
 
 interface TimeBlockProps {
@@ -19,16 +19,11 @@ export function TimeBlock({ data, isSelected = false, onClick, onDeleted }: Time
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
   const colors = getBlockColor(data.goalId);
 
-  // 计算显示内容
-  const startTimeStr = formatTime(data.startTime);
-  const endTimeStr = formatTime(data.endTime);
-
   // 是否有备注
   const hasNote = data.note && data.note.trim().length > 0;
 
   // 计算最小高度（确保即使很短的区块也能显示文字）
-  // 15分钟 = 1.04% 的高度，我们需要至少能显示一行文字
-  const minHeightPx = 20;
+  const minHeightPx = 16;
 
   // 处理右键点击
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -63,25 +58,29 @@ export function TimeBlock({ data, isSelected = false, onClick, onDeleted }: Time
         onClick={() => onClick?.(data)}
         onContextMenu={handleContextMenu}
       >
-        {/* 内容区域 - 参考 Apple Calendar 风格 */}
-        <div className="px-1.5 py-0.5 h-full flex flex-col justify-start overflow-hidden">
-          {/* 标题 - 始终显示，使用小字体 */}
-          <div className={`text-[11px] font-semibold ${colors.text} truncate leading-tight`}>
+        {/* 内容区域 - Flex 居中对齐 */}
+        <div className="h-full flex items-center justify-center px-1 overflow-hidden">
+          {/* 标题 - 12px，单行省略 */}
+          <div 
+            className={`
+              text-xs font-medium ${colors.text} 
+              whitespace-nowrap overflow-hidden text-ellipsis
+              leading-none
+            `}
+            title={data.goalTitle}
+          >
             {data.goalTitle}
           </div>
 
-          {/* 时间 - 始终显示 */}
-          <div className={`text-[10px] ${colors.text} opacity-80 truncate`}>
-            {startTimeStr} - {endTimeStr}
-          </div>
-
-          {/* 备注指示器 - 极小图标 */}
+          {/* 备注指示器 - 极小图标，放在标题后面 */}
           {hasNote && (
-            <div className="mt-0.5">
-              <svg className={`w-2.5 h-2.5 ${colors.text} opacity-60`} fill="currentColor" viewBox="0 0 24 24">
-                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
-              </svg>
-            </div>
+            <svg 
+              className={`w-2 h-2 ml-0.5 ${colors.text} opacity-60 flex-shrink-0`} 
+              fill="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+            </svg>
           )}
         </div>
       </div>
