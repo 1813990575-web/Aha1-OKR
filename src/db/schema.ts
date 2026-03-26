@@ -16,23 +16,31 @@ export interface Goal {
   updatedAt: number;
 }
 
+// 专注记录接口
+export interface FocusLog {
+  id: string;
+  goalId: string;           // 关联的任务ID
+  goalTitle: string;        // 任务标题（冗余存储，避免关联查询）
+  startTime: number;        // 开始时间 (timestamp)
+  endTime: number;          // 结束时间 (timestamp)
+  duration: number;         // 实际专注时长（秒）
+  plannedDuration: number;  // 计划专注时长（秒）
+  note: string | null;      // 备注
+  createdAt: number;
+}
+
 // 数据库类
 export class AhaOKRDatabase extends Dexie {
   goals!: Table<Goal>;
+  focusLogs!: Table<FocusLog>;
 
   constructor() {
     super('AhaOKRDatabase');
     
-    // 版本 3：添加时间字段
-    this.version(3).stores({
-      goals: 'id, parentId, isSplit, isCompleted, startDate, endDate, showDeadline, createdAt, updatedAt'
-    }).upgrade(tx => {
-      // 升级时，为现有目标设置默认值
-      return tx.table('goals').toCollection().modify(goal => {
-        goal.startDate = goal.startDate || null;
-        goal.endDate = goal.endDate || null;
-        goal.showDeadline = goal.showDeadline || false;
-      });
+    // 版本 4：添加 focus_logs 表
+    this.version(4).stores({
+      goals: 'id, parentId, isSplit, isCompleted, startDate, endDate, showDeadline, createdAt, updatedAt',
+      focusLogs: 'id, goalId, startTime, endTime, [goalId+startTime], [startTime+endTime]'
     });
   }
 }
@@ -51,6 +59,10 @@ export async function initDatabase(): Promise<void> {
       throw new Error('Goals table not found');
     }
     
+    if (!db.focusLogs) {
+      throw new Error('FocusLogs table not found');
+    }
+    
     console.log('[Database] 数据库连接成功');
   } catch (error) {
     console.error('[Database] 数据库连接失败:', error);
@@ -61,4 +73,54 @@ export async function initDatabase(): Promise<void> {
 // 检查数据库状态
 export function isDatabaseReady(): boolean {
   return db.isOpen();
+}
+
+// FocusLog 相关操作
+export async function createFocusLog(log: Omit<FocusLog, 'id' | 'createdAt'>): Promise<FocusLog> {
+  const newLog: FocusLog = {
+    ...log,
+    id: crypto.randomUUID(),
+    createdAt: Date.now(),
+  };
+  await db.focusLogs.add(newLog);
+  return newLog;
+}
+
+export async function getFocusLogsByDate(date: Date): Promise<FocusLog[]> {
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  return db.focusLogs
+    .where('startTime')
+    .between(startOfDay.getTime(), endOfDay.getTime())
+    .sortBy('startTime');
+}
+
+export async function getFocusLogsByDateRange(startDate: Date, endDate: Date): Promise<FocusLog[]> {
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999);
+
+  return db.focusLogs
+    .where('startTime')
+    .between(start.getTime(), end.getTime())
+    .sortBy('startTime');
+}
+
+export async function getFocusLogsByGoalId(goalId: string): Promise<FocusLog[]> {
+  return db.focusLogs
+    .where('goalId')
+    .equals(goalId)
+    .sortBy('startTime');
+}
+
+export async function deleteFocusLog(id: string): Promise<void> {
+  await db.focusLogs.delete(id);
+}
+
+export async function updateFocusLogNote(id: string, note: string | null): Promise<void> {
+  await db.focusLogs.update(id, { note });
 }

@@ -17,6 +17,7 @@ export function TimerBubble({ goalTitle, anchorRef }: TimerBubbleProps) {
     startTimer,
     pauseTimer,
     resetTimer,
+    completeTimer,
     adjustTime,
   } = useTimer();
 
@@ -67,6 +68,12 @@ export function TimerBubble({ goalTitle, anchorRef }: TimerBubbleProps) {
   // 处理调整时间
   const handleAdjustTime = (deltaMinutes: number) => {
     adjustTime(deltaMinutes);
+  };
+
+  // 处理完成
+  const handleComplete = () => {
+    completeTimer();
+    setShowBubble(false);
   };
 
   if (!showBubble) return null;
@@ -182,8 +189,29 @@ export function TimerBubble({ goalTitle, anchorRef }: TimerBubbleProps) {
           </div>
         </div>
 
-        {/* 控制按钮 */}
+        {/* 控制按钮 - 顺序：重置、暂停/开始、完成 */}
         <div className="flex items-center gap-2">
+          {/* 重置按钮 */}
+          <button
+            onClick={resetTimer}
+            className="
+              w-10 h-10 flex items-center justify-center
+              rounded-xl bg-stone-100 hover:bg-stone-200
+              text-stone-600 hover:text-stone-800
+              transition-all duration-200
+            "
+            title="重置"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </button>
+
           {/* 开始/暂停按钮 */}
           <button
             onClick={handleTogglePlay}
@@ -217,24 +245,19 @@ export function TimerBubble({ goalTitle, anchorRef }: TimerBubbleProps) {
             )}
           </button>
 
-          {/* 重置按钮 */}
+          {/* 完成按钮 */}
           <button
-            onClick={resetTimer}
+            onClick={handleComplete}
             className="
               w-10 h-10 flex items-center justify-center
-              rounded-xl bg-stone-100 hover:bg-stone-200
-              text-stone-600 hover:text-stone-800
+              rounded-xl bg-green-100 hover:bg-green-200
+              text-green-600 hover:text-green-800
               transition-all duration-200
             "
-            title="重置"
+            title="完成"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </button>
         </div>

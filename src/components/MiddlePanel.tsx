@@ -32,8 +32,8 @@ export function MiddlePanel({ width }: MiddlePanelProps) {
       className="h-full bg-stone-50/50 border-r border-stone-200/60 flex flex-col flex-shrink-0 relative"
       style={{ width }}
     >
-      {/* Top Bar */}
-      <div className="h-10 border-b border-stone-200/60 flex items-center px-4" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
+      {/* Top Bar - 独立的上方面板，用于拖拽应用 */}
+      <div className="h-10 bg-stone-50/80 flex items-center px-4 flex-shrink-0" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
 
       {/* Tree Content */}
       <div className="flex-1 overflow-y-auto py-2">

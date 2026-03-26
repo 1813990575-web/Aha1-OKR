@@ -4,6 +4,7 @@ import { useTimer } from './Timer/TimerProvider';
 import { MiniTimer } from './Timer/MiniTimer';
 import { TimerBubble } from './Timer/TimerBubble';
 import { DatePicker } from './DatePicker';
+import { TimelineContainer } from './Timeline';
 import dayjs from 'dayjs';
 
 export function RightPanel() {
@@ -43,9 +44,9 @@ export function RightPanel() {
   if (!selectedGoal) {
     return (
       <div className="flex-1 h-full bg-white flex flex-col">
-        {/* Top Bar */}
-        <div className="h-10 border-b border-stone-200/60 flex items-center px-4" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
-        
+        {/* Top Bar - 独立的上方面板，用于拖拽应用 */}
+        <div className="h-10 bg-stone-50/80 flex items-center px-4 flex-shrink-0" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
+
         {/* Empty State */}
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
@@ -118,9 +119,12 @@ export function RightPanel() {
   };
 
   return (
-    <div className="flex-1 h-full bg-white flex flex-col relative">
-      {/* Top Bar */}
-      <div className="h-10 border-b border-stone-200/60 flex items-center px-4" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
+    <div className="flex-1 h-full bg-white flex flex-col relative min-w-0">
+      {/* Top Bar - 独立的上方面板，用于拖拽应用 */}
+      <div 
+        className="h-10 bg-stone-50/80 flex items-center px-4 flex-shrink-0" 
+        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} 
+      />
 
       {/* Header - 只在子目标管理视图显示 */}
       {viewMode === 'goals' && (
@@ -194,9 +198,9 @@ export function RightPanel() {
       )}
 
       {/* Content Area - 根据视图模式显示不同内容 */}
-      <div className="flex-1 overflow-y-auto px-8 py-6">
-        {viewMode === 'goals' ? (
-          /* 子目标管理视图 */
+      {viewMode === 'goals' ? (
+        /* 子目标管理视图 */
+        <div className="flex-1 overflow-y-auto px-8 py-6">
           <>
             {childGoals.length > 0 && (
               <div className="flex flex-col items-start space-y-0.5">
@@ -261,19 +265,13 @@ export function RightPanel() {
               </button>
             )}
           </>
-        ) : (
-          /* 时间统计视图 - 占位 */
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-16 h-16 mb-4 rounded-2xl bg-stone-100 flex items-center justify-center">
-              <svg className="w-8 h-8 text-stone-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-stone-700 mb-2">时间统计</h3>
-            <p className="text-sm text-stone-400">专注计时数据将在这里展示</p>
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        /* 时间统计视图 - 无 padding，占满空间 */
+        <div className="flex-1 overflow-hidden relative">
+          <TimelineContainer />
+        </div>
+      )}
 
       {/* Date Picker Modal */}
       <DatePicker
@@ -292,10 +290,16 @@ export function RightPanel() {
         }}
       />
 
-      {/* 视图切换悬浮按钮 */}
+      {/* 视图切换悬浮按钮 - fixed 定位，带红色调试边框 */}
       <button
         onClick={() => setViewMode(viewMode === 'goals' ? 'time' : 'goals')}
-        className="absolute bottom-6 right-6 w-12 h-12 bg-stone-800 hover:bg-stone-700 text-white rounded-full shadow-lg shadow-stone-300/50 hover:shadow-xl hover:shadow-stone-300/50 transition-all duration-200 flex items-center justify-center hover:scale-105 z-10"
+        className="fixed w-12 h-12 bg-stone-800 hover:bg-stone-700 text-white rounded-full shadow-lg shadow-stone-300/50 hover:shadow-xl hover:shadow-stone-300/50 transition-all duration-200 flex items-center justify-center hover:scale-105"
+        style={{ 
+          bottom: '40px', 
+          right: '40px', 
+          zIndex: 99999,
+          border: '2px solid red' // 调试边框
+        }}
         title={viewMode === 'goals' ? '查看时间统计' : '返回子目标管理'}
       >
         {viewMode === 'goals' ? (

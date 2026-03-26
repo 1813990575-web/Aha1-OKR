@@ -2,7 +2,7 @@ import { StrictMode, useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
-import { initDatabase, isDatabaseReady, db } from './db/schema.ts'
+import { initDatabase, db } from './db/schema.ts'
 
 // 启动守卫组件
 function BootstrapGuard() {

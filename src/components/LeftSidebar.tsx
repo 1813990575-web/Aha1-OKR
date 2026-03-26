@@ -1,8 +1,10 @@
+import React from 'react';
+
 export function LeftSidebar() {
   return (
     <div className="w-[220px] h-full bg-[#fafaf9] border-r border-stone-200/60 flex flex-col">
-      {/* Top Bar - 为 macOS 红绿灯按钮留出空间 */}
-      <div className="h-10 flex items-center px-4" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
+      {/* Top Bar - 独立的上方面板，用于拖拽应用 */}
+      <div className="h-10 bg-stone-50/80 flex items-center px-4 flex-shrink-0" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
 
       {/* Navigation */}
       <nav className="flex-1 px-2 py-2 space-y-0.5">
@@ -26,7 +28,7 @@ export function LeftSidebar() {
 }
 
 function NavItem({ icon, label, hasSubmenu }: { icon: string; label: string; hasSubmenu?: boolean }) {
-  const icons: Record<string, JSX.Element> = {
+  const icons: Record<string, React.ReactNode> = {
     timeline: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
