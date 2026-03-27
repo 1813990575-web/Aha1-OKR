@@ -1,6 +1,7 @@
 const { app, BrowserWindow, session, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { autoUpdater } = require('electron-updater');
+const log = require('electron-log');
 
 // 在应用启动前禁用沙盒
 app.commandLine.appendSwitch('no-sandbox');
@@ -14,11 +15,17 @@ const userDataPath = path.join(app.getPath('appData'), 'aha-okr-1.3');
 app.setPath('userData', userDataPath);
 console.log('[Electron] User data path:', userDataPath);
 
+// 配置 electron-log
+log.transports.file.level = 'info';
+log.transports.console.level = 'debug';
+autoUpdater.logger = log;
+
 // 保持窗口对象的全局引用，防止被垃圾回收
 let mainWindow = null;
 
 // 自动更新相关变量
 let updateDownloaded = false;
+let updateAvailable = false;
 
 // 判断是否为开发环境
 const isDev = !app.isPackaged;
@@ -103,28 +110,43 @@ function createWindow() {
 function setupAutoUpdater() {
   // 开发环境下不检查更新（除非强制设置）
   if (isDev && !process.env.FORCE_AUTO_UPDATE) {
-    console.log('[AutoUpdater] 开发模式，跳过自动更新检查');
+    log.info('[AutoUpdater] 开发模式，跳过自动更新检查');
     return;
   }
 
-  // 设置更新日志
-  autoUpdater.logger = console;
+  // 设置自动更新配置
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = false;
 
+  log.info('[AutoUpdater] 自动更新已配置');
+  log.info('[AutoUpdater] 当前版本:', app.getVersion());
+
   // 检查更新时发生错误
   autoUpdater.on('error', (error) => {
-    console.error('[AutoUpdater] 更新错误:', error);
+    log.error('[AutoUpdater] 更新错误:', error);
   });
 
   // 正在检查更新
   autoUpdater.on('checking-for-update', () => {
-    console.log('[AutoUpdater] 正在检查更新...');
+    log.info('[AutoUpdater] 正在检查更新...');
   });
 
-  // 发现新版本
+  // 发现新版本 - 立即弹窗提示用户
   autoUpdater.on('update-available', (info) => {
-    console.log('[AutoUpdater] 发现新版本:', info.version);
+    log.info('[AutoUpdater] 发现新版本:', info.version);
+    updateAvailable = true;
+    
+    // 立即弹窗提示用户有新版本正在下载
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: '发现新版本',
+      message: `检测到新版本 v${info.version}，正在后台下载...`,
+      detail: '下载完成后将提示您安装更新。请保持应用运行。',
+      buttons: ['知道了'],
+      defaultId: 0,
+    });
+
+    // 向渲染进程发送更新可用事件
     if (mainWindow) {
       mainWindow.webContents.send('update-available', info);
     }
@@ -132,21 +154,24 @@ function setupAutoUpdater() {
 
   // 当前已是最新版本
   autoUpdater.on('update-not-available', (info) => {
-    console.log('[AutoUpdater] 当前已是最新版本');
+    log.info('[AutoUpdater] 当前已是最新版本:', app.getVersion());
   });
 
   // 下载进度
   autoUpdater.on('download-progress', (progressObj) => {
     const percent = Math.round(progressObj.percent);
-    console.log(`[AutoUpdater] 下载进度: ${percent}%`);
+    const transferred = (progressObj.transferred / 1024 / 1024).toFixed(2);
+    const total = (progressObj.total / 1024 / 1024).toFixed(2);
+    log.info(`[AutoUpdater] 下载进度: ${percent}% (${transferred}MB / ${total}MB)`);
+    
     if (mainWindow) {
       mainWindow.webContents.send('download-progress', progressObj);
     }
   });
 
-  // 更新下载完成
+  // 更新下载完成 - 立即弹窗询问是否重启
   autoUpdater.on('update-downloaded', (info) => {
-    console.log('[AutoUpdater] 更新下载完成:', info.version);
+    log.info('[AutoUpdater] 更新下载完成:', info.version);
     updateDownloaded = true;
     
     // 向渲染进程发送更新下载完成事件
@@ -157,16 +182,19 @@ function setupAutoUpdater() {
     // 弹出对话框询问用户是否立即重启安装
     dialog.showMessageBox(mainWindow, {
       type: 'info',
-      title: '新版本已就绪',
-      message: `Aha1-OKR ${info.version} 已下载完成`,
-      detail: '新版本已经准备好安装。您希望立即重启应用以完成更新吗？',
-      buttons: ['立即重启', '稍后手动重启'],
+      title: '更新已准备就绪',
+      message: `Aha1-OKR v${info.version} 已下载完成`,
+      detail: '更新已准备就绪，是否立即重启应用以安装新版本？',
+      buttons: ['立即重启', '稍后'],
       defaultId: 0,
       cancelId: 1,
     }).then((result) => {
       if (result.response === 0) {
         // 用户选择立即重启
+        log.info('[AutoUpdater] 用户选择立即重启安装更新');
         autoUpdater.quitAndInstall(false, true);
+      } else {
+        log.info('[AutoUpdater] 用户选择稍后安装更新');
       }
     });
   });
@@ -174,10 +202,11 @@ function setupAutoUpdater() {
   // IPC 监听：用户从 UI 触发检查更新
   ipcMain.handle('check-for-updates', async () => {
     try {
+      log.info('[AutoUpdater] 手动触发检查更新');
       await autoUpdater.checkForUpdates();
       return { success: true };
     } catch (error) {
-      console.error('[AutoUpdater] 手动检查更新失败:', error);
+      log.error('[AutoUpdater] 手动检查更新失败:', error);
       return { success: false, error: error.message };
     }
   });
@@ -185,6 +214,7 @@ function setupAutoUpdater() {
   // IPC 监听：用户从 UI 触发立即安装
   ipcMain.handle('quit-and-install', () => {
     if (updateDownloaded) {
+      log.info('[AutoUpdater] 用户通过 UI 触发立即安装');
       autoUpdater.quitAndInstall(false, true);
     }
   });
@@ -193,13 +223,22 @@ function setupAutoUpdater() {
 // 启动时检查更新
 async function checkForUpdatesOnStartup() {
   try {
-    // 延迟 3 秒后检查更新，避免影响应用启动速度
+    // 延迟 5 秒后检查更新，避免影响应用启动速度
     setTimeout(async () => {
-      console.log('[AutoUpdater] 启动检查更新...');
-      await autoUpdater.checkForUpdatesAndNotify();
-    }, 3000);
+      log.info('[AutoUpdater] 启动检查更新...');
+      log.info('[AutoUpdater] 检查地址: https://github.com/1813990575-web/Aha1-OKR/releases');
+      
+      try {
+        const result = await autoUpdater.checkForUpdatesAndNotify();
+        if (result) {
+          log.info('[AutoUpdater] 检查更新结果:', result.updateInfo ? '有新版本' : '无更新');
+        }
+      } catch (checkError) {
+        log.error('[AutoUpdater] 检查更新时出错:', checkError);
+      }
+    }, 5000);
   } catch (error) {
-    console.error('[AutoUpdater] 启动检查更新失败:', error);
+    log.error('[AutoUpdater] 启动检查更新失败:', error);
   }
 }
 
