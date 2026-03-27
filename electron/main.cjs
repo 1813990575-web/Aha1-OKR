@@ -274,6 +274,38 @@ function setupAutoUpdater() {
   });
 }
 
+// 设置 IPC 通信
+function setupIpcHandlers() {
+  // 获取版本号
+  ipcMain.on('get-version', (event) => {
+    log.info('[IPC] 获取版本号:', app.getVersion());
+    event.reply('app-version', app.getVersion());
+  });
+
+  // 窗口控制
+  ipcMain.on('window-minimize', () => {
+    if (mainWindow) {
+      mainWindow.minimize();
+    }
+  });
+
+  ipcMain.on('window-maximize', () => {
+    if (mainWindow) {
+      if (mainWindow.isMaximized()) {
+        mainWindow.unmaximize();
+      } else {
+        mainWindow.maximize();
+      }
+    }
+  });
+
+  ipcMain.on('window-close', () => {
+    if (mainWindow) {
+      mainWindow.close();
+    }
+  });
+}
+
 // 启动时检查更新
 async function checkForUpdatesOnStartup() {
   try {
@@ -313,6 +345,9 @@ app.on('before-quit', (event) => {
 // Electron 初始化完成
 app.whenReady().then(() => {
   log.info('[App] Electron 就绪');
+  
+  // 设置 IPC 通信
+  setupIpcHandlers();
   
   // 直接创建窗口，保留 IndexedDB 数据
   createWindow();
