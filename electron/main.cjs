@@ -2,6 +2,7 @@ const { app, BrowserWindow, session, ipcMain, dialog } = require('electron');
 const path = require('path');
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
+const fs = require('fs');
 
 // 在应用启动前禁用沙盒
 app.commandLine.appendSwitch('no-sandbox');
@@ -15,10 +16,23 @@ const userDataPath = path.join(app.getPath('appData'), 'aha-okr-1.3');
 app.setPath('userData', userDataPath);
 console.log('[Electron] User data path:', userDataPath);
 
-// 配置 electron-log
+// 配置 electron-log - 显式设置日志路径
+const logPath = path.join(userDataPath, 'logs');
+if (!fs.existsSync(logPath)) {
+  fs.mkdirSync(logPath, { recursive: true });
+}
+log.transports.file.resolvePath = () => path.join(logPath, 'main.log');
 log.transports.file.level = 'info';
 log.transports.console.level = 'debug';
 autoUpdater.logger = log;
+
+log.info('=================================');
+log.info('[App] 应用启动');
+log.info('[App] 版本:', app.getVersion());
+log.info('[App] 架构:', process.arch);
+log.info('[App] 平台:', process.platform);
+log.info('[App] 日志路径:', logPath);
+log.info('=================================');
 
 // 保持窗口对象的全局引用，防止被垃圾回收
 let mainWindow = null;
@@ -26,6 +40,7 @@ let mainWindow = null;
 // 自动更新相关变量
 let updateDownloaded = false;
 let updateAvailable = false;
+let isQuittingForUpdate = false;
 
 // 判断是否为开发环境
 const isDev = !app.isPackaged;
@@ -59,6 +74,7 @@ function createWindow() {
     // 开发环境：加载 Vite 开发服务器
     const devServerUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
     console.log('[Electron] Loading dev URL:', devServerUrl);
+    log.info('[Electron] 开发模式，加载 URL:', devServerUrl);
     
     setTimeout(() => {
       mainWindow.loadURL(devServerUrl);
@@ -69,21 +85,26 @@ function createWindow() {
     // 使用 app.getAppPath() 获取应用根目录
     const indexPath = path.join(app.getAppPath(), 'dist', 'index.html');
     console.log('[Electron] Loading production build from:', indexPath);
+    log.info('[Electron] 生产模式，加载文件:', indexPath);
     
     // 检查文件是否存在（调试用）
-    const fs = require('fs');
     if (fs.existsSync(indexPath)) {
       console.log('[Electron] index.html exists');
+      log.info('[Electron] index.html 存在');
     } else {
       console.error('[Electron] index.html NOT found at:', indexPath);
+      log.error('[Electron] index.html 不存在:', indexPath);
       // 尝试备用路径
       const altPath = path.join(__dirname, '..', 'dist', 'index.html');
       console.log('[Electron] Trying alternative path:', altPath);
+      log.info('[Electron] 尝试备用路径:', altPath);
       if (fs.existsSync(altPath)) {
         console.log('[Electron] index.html found at alternative path');
+        log.info('[Electron] 在备用路径找到 index.html');
         mainWindow.loadFile(altPath);
       } else {
         console.error('[Electron] index.html not found at alternative path either');
+        log.error('[Electron] 备用路径也不存在 index.html');
       }
     }
     
@@ -93,12 +114,14 @@ function createWindow() {
   // 窗口加载完成后显示
   mainWindow.once('ready-to-show', () => {
     console.log('[Electron] Window ready to show');
+    log.info('[Electron] 窗口准备显示');
     mainWindow.show();
   });
 
   // 监听加载失败
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription) => {
     console.error('[Electron] Failed to load:', errorCode, errorDescription);
+    log.error('[Electron] 加载失败:', errorCode, errorDescription);
   });
 
   mainWindow.on('closed', () => {
@@ -118,12 +141,17 @@ function setupAutoUpdater() {
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = false;
 
+  log.info('[AutoUpdater] ===============================');
   log.info('[AutoUpdater] 自动更新已配置');
   log.info('[AutoUpdater] 当前版本:', app.getVersion());
+  log.info('[AutoUpdater] 当前架构:', process.arch);
+  log.info('[AutoUpdater] 更新源:', 'https://github.com/1813990575-web/Aha1-OKR/releases');
+  log.info('[AutoUpdater] ===============================');
 
   // 检查更新时发生错误
   autoUpdater.on('error', (error) => {
-    log.error('[AutoUpdater] 更新错误:', error);
+    log.error('[AutoUpdater] 更新错误:', error.message);
+    log.error('[AutoUpdater] 错误详情:', error.stack);
   });
 
   // 正在检查更新
@@ -133,7 +161,10 @@ function setupAutoUpdater() {
 
   // 发现新版本 - 立即弹窗提示用户
   autoUpdater.on('update-available', (info) => {
-    log.info('[AutoUpdater] 发现新版本:', info.version);
+    log.info('[AutoUpdater] ===============================');
+    log.info('[AutoUpdater] ✅ 发现新版本:', info.version);
+    log.info('[AutoUpdater] 发布日期:', info.releaseDate);
+    log.info('[AutoUpdater] ===============================');
     updateAvailable = true;
     
     // 立即弹窗提示用户有新版本正在下载
@@ -171,7 +202,9 @@ function setupAutoUpdater() {
 
   // 更新下载完成 - 立即弹窗询问是否重启
   autoUpdater.on('update-downloaded', (info) => {
-    log.info('[AutoUpdater] 更新下载完成:', info.version);
+    log.info('[AutoUpdater] ===============================');
+    log.info('[AutoUpdater] ✅ 更新下载完成:', info.version);
+    log.info('[AutoUpdater] ===============================');
     updateDownloaded = true;
     
     // 向渲染进程发送更新下载完成事件
@@ -192,7 +225,20 @@ function setupAutoUpdater() {
       if (result.response === 0) {
         // 用户选择立即重启
         log.info('[AutoUpdater] 用户选择立即重启安装更新');
-        autoUpdater.quitAndInstall(false, true);
+        isQuittingForUpdate = true;
+        
+        // 强制退出并安装更新
+        log.info('[AutoUpdater] 执行 quitAndInstall...');
+        
+        // 先关闭所有窗口
+        if (mainWindow) {
+          mainWindow.destroy();
+        }
+        
+        // 使用 setImmediate 确保窗口关闭后再执行安装
+        setImmediate(() => {
+          autoUpdater.quitAndInstall(true, true);
+        });
       } else {
         log.info('[AutoUpdater] 用户选择稍后安装更新');
       }
@@ -203,8 +249,8 @@ function setupAutoUpdater() {
   ipcMain.handle('check-for-updates', async () => {
     try {
       log.info('[AutoUpdater] 手动触发检查更新');
-      await autoUpdater.checkForUpdates();
-      return { success: true };
+      const result = await autoUpdater.checkForUpdates();
+      return { success: true, result };
     } catch (error) {
       log.error('[AutoUpdater] 手动检查更新失败:', error);
       return { success: false, error: error.message };
@@ -215,7 +261,15 @@ function setupAutoUpdater() {
   ipcMain.handle('quit-and-install', () => {
     if (updateDownloaded) {
       log.info('[AutoUpdater] 用户通过 UI 触发立即安装');
-      autoUpdater.quitAndInstall(false, true);
+      isQuittingForUpdate = true;
+      
+      if (mainWindow) {
+        mainWindow.destroy();
+      }
+      
+      setImmediate(() => {
+        autoUpdater.quitAndInstall(true, true);
+      });
     }
   });
 }
@@ -225,25 +279,41 @@ async function checkForUpdatesOnStartup() {
   try {
     // 延迟 5 秒后检查更新，避免影响应用启动速度
     setTimeout(async () => {
+      log.info('[AutoUpdater] ===============================');
       log.info('[AutoUpdater] 启动检查更新...');
+      log.info('[AutoUpdater] 当前版本:', app.getVersion());
       log.info('[AutoUpdater] 检查地址: https://github.com/1813990575-web/Aha1-OKR/releases');
       
       try {
         const result = await autoUpdater.checkForUpdatesAndNotify();
         if (result) {
           log.info('[AutoUpdater] 检查更新结果:', result.updateInfo ? '有新版本' : '无更新');
+          if (result.updateInfo) {
+            log.info('[AutoUpdater] 新版本:', result.updateInfo.version);
+          }
         }
       } catch (checkError) {
         log.error('[AutoUpdater] 检查更新时出错:', checkError);
       }
+      log.info('[AutoUpdater] ===============================');
     }, 5000);
   } catch (error) {
     log.error('[AutoUpdater] 启动检查更新失败:', error);
   }
 }
 
+// 处理 before-quit 事件 - 确保更新时能正常退出
+app.on('before-quit', (event) => {
+  log.info('[App] before-quit 事件触发');
+  if (isQuittingForUpdate) {
+    log.info('[App] 正在退出以安装更新');
+  }
+});
+
 // Electron 初始化完成
 app.whenReady().then(() => {
+  log.info('[App] Electron 就绪');
+  
   // 直接创建窗口，保留 IndexedDB 数据
   createWindow();
   
@@ -261,7 +331,12 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  log.info('[App] window-all-closed 事件触发');
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+app.on('quit', () => {
+  log.info('[App] 应用退出');
 });
