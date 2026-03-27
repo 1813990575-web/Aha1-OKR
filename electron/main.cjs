@@ -205,24 +205,14 @@ async function checkForUpdatesOnStartup() {
 
 // Electron 初始化完成
 app.whenReady().then(() => {
-  // 清除存储配额限制
-  session.defaultSession.clearStorageData({
-    storages: ['cookies', 'filesystem', 'indexdb', 'localstorage', 'shadercache', 'websql', 'serviceworkers', 'cachestorage']
-  }).then(() => {
-    console.log('[Electron] Storage data cleared');
-    createWindow();
-    
-    // 设置自动更新
-    setupAutoUpdater();
-    
-    // 启动时检查更新
-    checkForUpdatesOnStartup();
-  }).catch((err) => {
-    console.error('[Electron] Failed to clear storage:', err);
-    createWindow();
-    setupAutoUpdater();
-    checkForUpdatesOnStartup();
-  });
+  // 直接创建窗口，保留 IndexedDB 数据
+  createWindow();
+  
+  // 设置自动更新
+  setupAutoUpdater();
+  
+  // 启动时检查更新
+  checkForUpdatesOnStartup();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

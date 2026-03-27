@@ -24,7 +24,7 @@ export interface FocusLog {
   goalId: string;           // 关联的任务ID
   goalTitle: string;        // 任务标题（冗余存储，避免关联查询）
   startTime: number;        // 开始时间 (timestamp)
-  endTime: number;          // 结束时间 (timestamp)
+  endTime: number | null;   // 结束时间 (timestamp)，null 表示进行中
   duration: number;         // 实际专注时长（秒）
   plannedDuration: number;  // 计划专注时长（秒）
   note: string | null;      // 备注
@@ -100,6 +100,11 @@ export async function createFocusLog(log: Omit<FocusLog, 'id' | 'createdAt'>): P
   };
   await db.focusLogs.add(newLog);
   return newLog;
+}
+
+// 更新专注记录的结束时间和时长
+export async function updateFocusLogEndTime(id: string, endTime: number, duration: number): Promise<void> {
+  await db.focusLogs.update(id, { endTime, duration });
 }
 
 export async function getFocusLogsByDate(date: Date): Promise<FocusLog[]> {

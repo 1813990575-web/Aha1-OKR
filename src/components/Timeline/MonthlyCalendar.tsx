@@ -119,25 +119,25 @@ export function MonthlyCalendar({ selectedDate, onDateSelect }: MonthlyCalendarP
         ))}
       </div>
 
-      {/* 日期网格 - 极致压缩 */}
-      <div className="grid grid-cols-7 gap-px">
+      {/* 日期网格 - 自适应宽度 */}
+      <div className="grid grid-cols-7 gap-0.5">
         {/* 空白占位（月初前的空位） */}
         {Array.from({ length: firstDayOfWeek }).map((_, index) => (
-          <div key={`empty-${index}`} className="w-6 h-6" />
+          <div key={`empty-${index}`} className="aspect-square" />
         ))}
 
-        {/* 日期 - 固定 24px 尺寸，极浅灰度 */}
+        {/* 日期 - 自适应尺寸，极浅灰度 */}
         {monthDays.map((item) => (
           <button
             key={item.day}
             onClick={() => handleDateClick(item.day)}
             className={`
-              w-6 h-6 flex items-center justify-center
+              aspect-square flex items-center justify-center
               text-[11px] leading-none
               transition-all duration-150
-              ${item.isSelected
-                ? 'bg-red-500/20 text-red-700 font-medium rounded-full'
-                : item.isToday
+              ${item.isToday
+                ? 'bg-red-500/10 text-red-600 font-medium rounded-full'
+                : item.isSelected
                   ? 'text-stone-700 font-medium bg-stone-100 rounded-full'
                   : 'text-stone-400 hover:text-stone-600 hover:bg-stone-50/50 rounded-full'
               }

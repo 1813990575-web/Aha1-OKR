@@ -161,10 +161,15 @@ export function CalendarStrip({ selectedDate, onDateSelect, dailyStats }: Calend
                 {item.dayOfWeek}
               </span>
 
-              {/* 日期数字 */}
+              {/* 日期数字 - 状态优先：选中态 > 今天态 > 默认态 */}
               <span className={`
                 text-base font-semibold leading-tight
-                ${item.isToday && !item.isSelected ? 'text-stone-800' : ''}
+                ${item.isSelected
+                  ? 'text-white' // 只要被选中，统一显示白字
+                  : item.isToday
+                    ? 'text-red-500 font-bold' // 只有在'没被选中'且'是今天'时，才显示红字加粗
+                    : 'text-stone-600' // 普通日期显示默认灰色
+                }
               `}>
                 {item.dayOfMonth}
               </span>
@@ -175,11 +180,6 @@ export function CalendarStrip({ selectedDate, onDateSelect, dailyStats }: Calend
                   absolute bottom-1 w-1 h-1 rounded-full
                   ${item.isSelected ? 'bg-white/80' : 'bg-stone-400'}
                 `} />
-              )}
-
-              {/* 今日特殊标记 */}
-              {item.isToday && !item.isSelected && (
-                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full" />
               )}
             </button>
           ))}

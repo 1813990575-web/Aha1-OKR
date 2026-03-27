@@ -8,6 +8,7 @@ import type { TimeGridRef } from './TimeGrid';
 import { TimeBlock } from './TimeBlock';
 import { LogDetailPanel } from './LogDetailPanel';
 import { DayProgressBar } from './DayProgressBar';
+import { Splitter } from '../shared/Splitter';
 import type { TimeBlockData, DailyStats, FocusLog } from './types';
 import { convertToTimeBlockData } from './types';
 import { getFocusLogsByDate, getFocusLogsByDateRange } from '../../db/schema';
@@ -25,11 +26,64 @@ export function TimelineContainer({ goalId }: TimelineContainerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [dailyStats, setDailyStats] = useState<Map<string, DailyStats>>(new Map());
 
+  // 右侧面板宽度状态（默认 35%）
+  const [detailPanelWidth, setDetailPanelWidth] = useState(35);
+  const [isResizing, setIsResizing] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const startXRef = useRef(0);
+  const startWidthRef = useRef(35);
+
   // 使用 timeline store
   const { selectedFocusLogId, selectFocusLog } = useTimelineStore();
 
   // TimeGrid ref 用于保存和恢复滚动位置
   const timeGridRef = useRef<TimeGridRef>(null);
+
+  // 开始拖拽
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    startXRef.current = e.clientX;
+    startWidthRef.current = detailPanelWidth;
+  }, [detailPanelWidth]);
+
+  // 拖拽中
+  const handleResizeMove = useCallback((e: MouseEvent) => {
+    if (!isResizing || !containerRef.current) return;
+
+    const containerWidth = containerRef.current.offsetWidth;
+    const delta = e.clientX - startXRef.current;
+    const deltaPercent = (delta / containerWidth) * 100;
+    const newWidth = Math.max(25, Math.min(50, startWidthRef.current - deltaPercent)); // 注意这里是减，因为右侧面板从右边算
+    setDetailPanelWidth(newWidth);
+  }, [isResizing]);
+
+  // 结束拖拽
+  const handleResizeEnd = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  // 添加/移除全局鼠标事件监听
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleResizeMove);
+      document.addEventListener('mouseup', handleResizeEnd);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    } else {
+      document.removeEventListener('mousemove', handleResizeMove);
+      document.removeEventListener('mouseup', handleResizeEnd);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleResizeMove);
+      document.removeEventListener('mouseup', handleResizeEnd);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+  }, [isResizing, handleResizeMove, handleResizeEnd]);
 
   // 加载选中日期的专注记录
   const loadFocusLogs = useCallback(async () => {
@@ -117,7 +171,7 @@ export function TimelineContainer({ goalId }: TimelineContainerProps) {
   }, [loadFocusLogs]);
 
   return (
-    <div className="flex flex-row h-full bg-white w-full overflow-x-hidden" style={{ height: 'calc(100% - 80px)' }}>
+    <div ref={containerRef} className="flex flex-row h-full bg-white w-full overflow-x-hidden" style={{ height: 'calc(100% - 80px)' }}>
       {/* 左栏 - Master：日历和时间轴 */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* 24小时进度条 - 帮助时间感知 */}
@@ -161,11 +215,16 @@ export function TimelineContainer({ goalId }: TimelineContainerProps) {
         </div>
       </div>
 
+      {/* 分栏拖拽条 */}
+      <Splitter isResizing={isResizing} onResizeStart={handleResizeStart} />
+
       {/* 右栏 - Detail：详情面板 */}
-      <LogDetailPanel 
-        selectedDate={selectedDate}
-        onDateSelect={setSelectedDate}
-      />
+      <div style={{ width: `${detailPanelWidth}%`, minWidth: '280px', maxWidth: '500px' }}>
+        <LogDetailPanel
+          selectedDate={selectedDate}
+          onDateSelect={setSelectedDate}
+        />
+      </div>
     </div>
   );
 }

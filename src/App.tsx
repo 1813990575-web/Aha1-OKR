@@ -4,6 +4,7 @@ import { TimerProvider } from './components/Timer/TimerProvider';
 import { SidebarRail } from './components/SidebarRail';
 import { GoalTreeSidebar } from './components/GoalTreeSidebar';
 import { RightPanel } from './components/RightPanel';
+import { Splitter } from './components/shared/Splitter';
 
 function App() {
   const { loadGoals, getSplitGoals } = useGoalStore();
@@ -79,26 +80,7 @@ function App() {
 
         {/* Resizer - 可拖拽分隔条 */}
         {hasSplitGoals && (
-          <div
-            className="absolute z-20 cursor-col-resize group"
-            onMouseDown={handleResizeStart}
-            style={{
-              left: `${64 + middlePanelWidth}px`,
-              width: '6px',
-              height: '100%',
-              transform: 'translateX(-50%)',
-            }}
-          >
-            {/* 视觉线条 - 悬浮时显示 */}
-            <div 
-              className={`
-                absolute top-0 bottom-0 left-1/2 -translate-x-1/2
-                w-[2px] bg-blue-500/30 opacity-0 group-hover:opacity-100
-                transition-opacity duration-150
-                ${isResizing ? 'opacity-100' : ''}
-              `}
-            />
-          </div>
+          <Splitter isResizing={isResizing} onResizeStart={handleResizeStart} />
         )}
 
         {/* Right Panel - Main workspace（三级主工作区） */}

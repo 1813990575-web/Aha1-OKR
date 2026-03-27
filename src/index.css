@@ -119,10 +119,10 @@ code {
 /* 目标树节点高亮动画 */
 @keyframes goal-node-flash {
   0% {
-    background-color: rgba(251, 191, 36, 0.6); /* amber-300 with opacity */
+    background-color: rgba(168, 162, 158, 0.4); /* stone-400 with opacity */
   }
   50% {
-    background-color: rgba(251, 191, 36, 0.3);
+    background-color: rgba(168, 162, 158, 0.2);
   }
   100% {
     background-color: transparent;
@@ -131,4 +131,54 @@ code {
 
 .goal-node-flash {
   animation: goal-node-flash 0.6s ease-out;
+}
+
+/* 全局隐形滚动条样式 */
+/* Firefox */
+* {
+  scrollbar-width: none;
+}
+
+/* Chrome/Safari/Webkit */
+*::-webkit-scrollbar {
+  display: none;
+}
+
+/* 自定义滚动条容器 - 悬浮时显示 */
+.custom-scrollbar {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  display: block;
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 2px;
+}
+
+/* 悬浮时显示滚动条 */
+.custom-scrollbar:hover {
+  scrollbar-color: rgba(168, 162, 158, 0.4) transparent;
+}
+
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+  background: rgba(168, 162, 158, 0.4);
+}
+
+/* 滚动时临时显示滚动条 */
+.custom-scrollbar.scrolling {
+  scrollbar-color: rgba(168, 162, 158, 0.6) transparent;
+}
+
+.custom-scrollbar.scrolling::-webkit-scrollbar-thumb {
+  background: rgba(168, 162, 158, 0.6);
 }

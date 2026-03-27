@@ -4,7 +4,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTimelineStore } from '../../store/timelineStore';
 import { useGoalStore } from '../../store/goalStore';
+import { useTimer } from '../Timer/TimerProvider';
 import { MonthlyCalendar } from './MonthlyCalendar';
+import { MiniTimer } from '../Timer/MiniTimer';
 
 interface LogDetailPanelProps {
   selectedDate: Date;
@@ -14,6 +16,7 @@ interface LogDetailPanelProps {
 export function LogDetailPanel({ selectedDate, onDateSelect }: LogDetailPanelProps) {
   const { selectedFocusLog, updateFocusLogNote } = useTimelineStore();
   const { getGoalById } = useGoalStore();
+  const { activeFocusId, isRunning, isPaused } = useTimer();
 
   const [note, setNote] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -66,11 +69,8 @@ export function LogDetailPanel({ selectedDate, onDateSelect }: LogDetailPanelPro
     }
   }, [note, selectedFocusLog, updateFocusLogNote]);
 
-  // 保留 formatDuration 所需的 duration 值
-  const duration = selectedFocusLog?.duration || 0;
-
   return (
-    <div className="w-[35%] min-w-[280px] max-w-[360px] bg-white/90 backdrop-blur-sm border-l border-stone-200/60 flex flex-col overflow-hidden">
+    <div className="flex-1 flex flex-col w-full bg-white/90 backdrop-blur-sm border-l border-stone-200/60 overflow-hidden">
       {/* 顶部区域：月度日历 */}
       <div className="border-b border-stone-100">
         <MonthlyCalendar selectedDate={selectedDate} onDateSelect={onDateSelect} />
@@ -82,13 +82,17 @@ export function LogDetailPanel({ selectedDate, onDateSelect }: LogDetailPanelPro
           <>
             {/* 备注编辑区 - 整合时长标签和标题 */}
             <div className="flex flex-col px-4 pt-4 pb-4">
-              {/* 时长标签 */}
-              <span className="px-2 py-0.5 text-[10px] font-medium bg-stone-800 text-white rounded-full w-fit mb-2">
-                {Math.round(duration / 60)}min
-              </span>
-              
-              {/* 标题（原备注标签位置） */}
-              <h3 className="text-sm text-stone-800 font-semibold truncate mb-3">
+              {/* 迷你计时器 - 仅在专注进行中显示 */}
+              {selectedFocusLog.endTime === null && activeFocusId === selectedFocusLog.goalId && (isRunning || isPaused) && (
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="bg-stone-800 rounded-full px-1 py-0.5">
+                    <MiniTimer goalId={selectedFocusLog.goalId} />
+                  </div>
+                </div>
+              )}
+
+              {/* 标题（原备注标签位置）- 左对齐，与下方输入框对齐 */}
+              <h3 className="text-sm text-stone-800 font-semibold truncate mb-3 text-left">
                 {childGoal?.title || selectedFocusLog.goalTitle}
               </h3>
               

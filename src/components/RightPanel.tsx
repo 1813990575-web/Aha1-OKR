@@ -328,15 +328,14 @@ export function RightPanel() {
         goalTitle={selectedGoal.title}
       />
 
-      {/* 视图切换悬浮按钮 - fixed 定位，带红色调试边框 */}
+      {/* 视图切换悬浮按钮 - fixed 定位 */}
       <button
         onClick={() => setViewMode(viewMode === 'goals' ? 'time' : 'goals')}
         className="fixed w-12 h-12 bg-stone-800 hover:bg-stone-700 text-white rounded-full shadow-lg shadow-stone-300/50 hover:shadow-xl hover:shadow-stone-300/50 transition-all duration-200 flex items-center justify-center hover:scale-105"
         style={{ 
           bottom: '40px', 
           right: '40px', 
-          zIndex: 99999,
-          border: '2px solid red' // 调试边框
+          zIndex: 99999
         }}
         title={viewMode === 'goals' ? '查看时间统计' : '返回子目标管理'}
       >

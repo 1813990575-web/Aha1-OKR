@@ -104,23 +104,23 @@ export function TimerBubble({ goalTitle, anchorRef }: TimerBubbleProps) {
           rounded-2xl
           shadow-2xl shadow-stone-400/30
           border border-white/50
-          p-4
-          min-w-[280px]
+          p-6
+          min-w-[300px]
         "
       >
-        {/* 目标标题 */}
-        <div className="mb-3 text-center">
-          <span className="text-[10px] font-medium text-stone-400 uppercase tracking-wider">
-            专注中
-          </span>
-          <h3 className="text-sm font-semibold text-stone-800 truncate mt-0.5" title={goalTitle}>
+        {/* 目标标题 - 弱化显示，限制宽度并添加省略号 */}
+        <div className="mb-6 text-center px-4">
+          <h3 
+            className="text-xs font-medium text-stone-500 truncate max-w-[200px] mx-auto" 
+            title={goalTitle}
+          >
             {goalTitle}
           </h3>
         </div>
 
         {/* 时间调整 + 倒计时显示 */}
         <div 
-          className="flex items-baseline justify-center gap-6 mb-4 group"
+          className="flex items-baseline justify-center gap-6 mb-6 group"
           onMouseEnter={() => setShowTimeControls(true)}
           onMouseLeave={() => setShowTimeControls(false)}
         >
@@ -142,19 +142,16 @@ export function TimerBubble({ goalTitle, anchorRef }: TimerBubbleProps) {
           </button>
 
           {/* 倒计时显示 */}
-          <div className="text-center min-w-[100px]">
+          <div className="text-center min-w-[120px]">
             <div
               className={`
-                text-4xl font-mono font-bold tracking-tight
+                text-5xl font-mono font-bold tracking-tight
                 ${isRunning ? 'text-stone-800' : 'text-stone-600'}
                 ${timeRemaining < 60 ? 'text-red-500' : ''}
                 transition-colors duration-300
               `}
             >
               {formatTime(timeRemaining)}
-            </div>
-            <div className="text-xs text-stone-400 mt-1">
-              {isRunning ? '计时中...' : isPaused ? '已暂停' : '准备就绪'}
             </div>
           </div>
 
@@ -177,7 +174,7 @@ export function TimerBubble({ goalTitle, anchorRef }: TimerBubbleProps) {
         </div>
 
         {/* 进度条 */}
-        <div className="mb-4">
+        <div className="mb-6">
           <div className="h-1.5 bg-stone-200/70 rounded-full overflow-hidden">
             <div
               className={`

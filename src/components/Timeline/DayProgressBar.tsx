@@ -1,12 +1,12 @@
 // DayProgressBar.tsx - 24小时进度条组件
-// game rules: 展示今日已度过时间和剩余时间，帮助时间感知
-// 已度过时间用灰色，剩余时间用深色
+// game rules: 展示今日已度过百分比和剩余时间，帮助时间感知
+// 已度过百分比用灰色，剩余时间用深色
 
 import { useState, useEffect } from 'react';
 
 export function DayProgressBar() {
   const [progress, setProgress] = useState(0);
-  const [passedHours, setPassedHours] = useState(0);
+  const [passedPercent, setPassedPercent] = useState(0);
   const [remainingHours, setRemainingHours] = useState(24);
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export function DayProgressBar() {
       const remaining = 24 - passed;
 
       setProgress(progressPercent);
-      setPassedHours(Math.floor(passed * 10) / 10); // 保留一位小数
+      setPassedPercent(Math.round(progressPercent)); // 不保留小数
       setRemainingHours(Math.floor(remaining * 10) / 10);
     };
 
@@ -42,9 +42,9 @@ export function DayProgressBar() {
   return (
     <div className="px-4 py-3 bg-white shadow-sm z-10">
       <div className="flex items-center gap-3">
-        {/* 左侧 - 已度过时间（灰色） */}
+        {/* 左侧 - 已度过百分比（灰色） */}
         <span className="text-sm font-medium text-stone-400 min-w-[50px] text-right">
-          {passedHours}h
+          {passedPercent}%
         </span>
 
         {/* 进度条 */}

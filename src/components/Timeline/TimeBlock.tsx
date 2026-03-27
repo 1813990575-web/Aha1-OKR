@@ -2,9 +2,9 @@
 // game rules: 纯展示组件，接收计算好的位置数据，负责渲染和交互
 // 优化短时长色块的文字显示：只显示标题，居中对齐，极小字号
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { TimeBlockData } from './types';
-import { getBlockColor } from './types';
+import { getBlockColor, formatDurationCompact } from './types';
 import { TimeBlockContextMenu } from './TimeBlockContextMenu';
 import { useGoalStore } from '../../store/goalStore';
 import { getGoalNodeElement } from '../GoalTreeSidebar';
@@ -19,8 +19,9 @@ interface TimeBlockProps {
 export function TimeBlock({ data, isSelected = false, onClick, onDeleted }: TimeBlockProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+  const [currentTime, setCurrentTime] = useState(Date.now());
   const colors = getBlockColor(data.goalId);
-  
+
   // 获取 goalStore 方法
   const { expandGoalWithParents, selectGoal } = useGoalStore();
 
@@ -29,6 +30,17 @@ export function TimeBlock({ data, isSelected = false, onClick, onDeleted }: Time
 
   // 计算最小高度（确保即使很短的区块也能显示文字）
   const minHeightPx = 16;
+
+  // 进行中状态：实时更新高度
+  useEffect(() => {
+    if (!data.isOngoing) return;
+
+    const interval = setInterval(() => {
+      setCurrentTime(Date.now());
+    }, 60000); // 每分钟更新一次
+
+    return () => clearInterval(interval);
+  }, [data.isOngoing]);
 
   // 处理点击 - 联动左侧目录
   const handleClick = () => {
@@ -74,19 +86,34 @@ export function TimeBlock({ data, isSelected = false, onClick, onDeleted }: Time
     setContextMenu(null);
   };
 
+  // 计算进行中状态的动态高度
+  const getDynamicHeight = () => {
+    if (!data.isOngoing) {
+      return `${Math.max(data.heightPercent, 1.5)}%`;
+    }
+    // 进行中：从 startTime 到当前时间的时长
+    const elapsedMinutes = (currentTime - data.startTime) / (1000 * 60);
+    const displayMinutes = Math.max(elapsedMinutes, 15); // 最少显示15分钟
+    const heightPercent = Math.max((displayMinutes / (24 * 60)) * 100, 1.5);
+    return `${heightPercent}%`;
+  };
+
   return (
     <>
       <div
         className={`
           absolute left-14 right-1 rounded-md border-l-4 cursor-pointer
           transition-all duration-200
-          ${colors.bg} ${colors.border}
+          ${data.isOngoing 
+            ? 'bg-amber-100 border-amber-300 animate-pulse' // 进行中：琥珀色 + 脉冲动画
+            : `${colors.bg} ${colors.border}`
+          }
           ${isSelected ? 'ring-2 ring-stone-400 ring-offset-1 shadow-lg z-30' : ''}
           ${isHovered && !isSelected ? 'shadow-md z-20 brightness-95' : 'z-10'}
         `}
         style={{
           top: `${data.topPercent}%`,
-          height: `${Math.max(data.heightPercent, 1.5)}%`,
+          height: getDynamicHeight(),
           minHeight: `${minHeightPx}px`,
           borderLeftColor: 'currentColor',
         }}
@@ -95,24 +122,34 @@ export function TimeBlock({ data, isSelected = false, onClick, onDeleted }: Time
         onClick={handleClick}
         onContextMenu={handleContextMenu}
       >
-        {/* 内容区域 - Flex 居中对齐 */}
-        <div className="h-full flex items-center justify-center px-1 overflow-hidden">
-          {/* 标题 - 12px，单行省略 */}
+        {/* 内容区域 - 左对齐 */}
+        <div className="h-full flex items-center pl-2 pr-1 overflow-hidden">
+          {/* 进行中指示器 */}
+          {data.isOngoing && (
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 flex-shrink-0 animate-pulse" />
+          )}
+
+          {/* 时长 + 标题 - 合并显示 */}
           <div 
-            className={`
-              text-xs font-medium ${colors.text} 
-              whitespace-nowrap overflow-hidden text-ellipsis
-              leading-none
-            `}
-            title={data.goalTitle}
+            className="text-xs whitespace-nowrap overflow-hidden text-ellipsis text-left flex-1 leading-none"
+            title={`${formatDurationCompact(data.duration)} ${data.goalTitle}`}
           >
-            {data.goalTitle}
+            {/* 时长部分 - 加粗深色 */}
+            <span className={`font-bold ${data.isOngoing ? 'text-amber-900' : 'text-stone-700'}`}>
+              {formatDurationCompact(data.duration)}
+            </span>
+            {/* 分隔符 */}
+            <span className={`mx-1 ${data.isOngoing ? 'text-amber-600' : 'text-stone-400'}`}>·</span>
+            {/* 标题部分 - 普通字重 */}
+            <span className={`font-normal ${data.isOngoing ? 'text-amber-800' : colors.text}`}>
+              {data.goalTitle}
+            </span>
           </div>
 
           {/* 备注指示器 - 极小图标，放在标题后面 */}
           {hasNote && (
             <svg 
-              className={`w-2 h-2 ml-0.5 ${colors.text} opacity-60 flex-shrink-0`} 
+              className={`w-2 h-2 ml-1 ${data.isOngoing ? 'text-amber-800' : colors.text} opacity-60 flex-shrink-0`} 
               fill="currentColor" 
               viewBox="0 0 24 24"
             >
@@ -128,8 +165,10 @@ export function TimeBlock({ data, isSelected = false, onClick, onDeleted }: Time
           x={contextMenu.x}
           y={contextMenu.y}
           logId={data.id}
+          isOngoing={data.isOngoing}
           onClose={handleCloseContextMenu}
           onDeleted={onDeleted || (() => {})}
+          onCompleted={onDeleted || (() => {})}
         />
       )}
     </>

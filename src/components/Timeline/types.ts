@@ -12,9 +12,10 @@ export interface TimeBlockData {
   goalId: string;
   goalTitle: string;
   startTime: number;        // 开始时间戳
-  endTime: number;          // 结束时间戳
+  endTime: number | null;   // 结束时间戳，null 表示进行中
   duration: number;         // 时长（秒）
   note: string | null;
+  isOngoing: boolean;       // 是否进行中
   // 计算属性 - 由 TimeGrid 计算
   topPercent: number;       // 在时间轴上的起始位置（0-100%）
   heightPercent: number;    // 在时间轴上的高度（0-100%）
@@ -70,7 +71,7 @@ export function getBlockColor(goalId: string): typeof BLOCK_COLORS[number] {
   return BLOCK_COLORS[index];
 }
 
-// 格式化时长为可读字符串
+// 格式化时长为可读字符串（中文格式）
 export function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -79,6 +80,19 @@ export function formatDuration(seconds: number): string {
     return `${hours}小时${minutes > 0 ? `${minutes}分` : ''}`;
   }
   return `${minutes}分钟`;
+}
+
+// 格式化时长为紧凑格式（用于时间块显示）
+// < 60分钟: 43min
+// >= 60分钟: 1h 17min
+export function formatDurationCompact(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}min`;
+  }
+  return `${minutes}min`;
 }
 
 // 格式化时间为 HH:mm
@@ -91,7 +105,14 @@ export function formatTime(timestamp: number): string {
 export function convertToTimeBlockData(log: FocusLog): TimeBlockData {
   const startDate = new Date(log.startTime);
   const startMinutes = startDate.getHours() * 60 + startDate.getMinutes();
-  const durationMinutes = log.duration / 60;
+  
+  // 判断是否进行中
+  const isOngoing = log.endTime === null;
+  
+  // 计算时长：进行中则显示默认15分钟，否则使用实际时长
+  const durationMinutes = isOngoing 
+    ? 15  // 进行中默认显示15分钟
+    : log.duration / 60;
   
   const topPercent = (startMinutes / (24 * 60)) * 100;
   const heightPercent = Math.max((durationMinutes / (24 * 60)) * 100, 1.5); // 最小高度 1.5%
@@ -102,8 +123,9 @@ export function convertToTimeBlockData(log: FocusLog): TimeBlockData {
     goalTitle: log.goalTitle,
     startTime: log.startTime,
     endTime: log.endTime,
-    duration: log.duration,
+    duration: isOngoing ? 15 * 60 : log.duration, // 进行中显示15分钟的秒数
     note: log.note,
+    isOngoing,
     topPercent,
     heightPercent,
   };

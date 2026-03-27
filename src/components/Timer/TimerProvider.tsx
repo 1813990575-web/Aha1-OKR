@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect, type ReactNode } from 'react';
-import { createFocusLog } from '../../db/schema';
+import { createFocusLog, updateFocusLogEndTime, db } from '../../db/schema';
 import { useGoalStore } from '../../store/goalStore';
 
 interface TimerState {
@@ -54,6 +54,9 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   // 专注开始时间（用于记录）
   const [startTime, setStartTime] = useState<number | null>(null);
   
+  // 当前专注记录ID（用于更新进行中的记录）
+  const [currentFocusLogId, setCurrentFocusLogId] = useState<string | null>(null);
+  
   // 气泡显示状态
   const [showBubble, setShowBubble] = useState(false);
   
@@ -67,6 +70,12 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   const onCompleteRef = useRef(onTimerComplete);
   const isRunningRef = useRef(isRunning);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const currentFocusLogIdRef = useRef(currentFocusLogId);
+  
+  // 同步 ref 和 state
+  useEffect(() => {
+    currentFocusLogIdRef.current = currentFocusLogId;
+  }, [currentFocusLogId]);
   
   // 获取目标信息用于记录
   const { getGoalById } = useGoalStore();
@@ -100,41 +109,73 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // 保存专注记录到数据库
-  const saveFocusLog = useCallback(async (
+  // 创建进行中的专注记录（点击开始时调用）
+  const createOngoingFocusLog = useCallback(async (
     goalId: string,
     start: number,
-    end: number,
     plannedDuration: number
-  ) => {
+  ): Promise<string | null> => {
     try {
       const goal = getGoalById(goalId);
       if (!goal) {
         console.error('[Timer] 无法找到目标信息:', goalId);
-        return;
+        return null;
       }
 
-      const actualDuration = Math.floor((end - start) / 1000); // 转换为秒
-      
-      await createFocusLog({
+      const newLog = await createFocusLog({
         goalId,
         goalTitle: goal.title,
         startTime: start,
-        endTime: end,
-        duration: actualDuration,
+        endTime: null, // 进行中，结束时间为 null
+        duration: 0,   // 进行中，时长为 0
         plannedDuration,
         note: null,
       });
       
-      console.log('[Timer] 专注记录已保存:', {
+      console.log('[Timer] 专注记录已创建（进行中）:', {
+        logId: newLog.id,
         goalId,
         goalTitle: goal.title,
+      });
+      
+      return newLog.id;
+    } catch (error) {
+      console.error('[Timer] 创建专注记录失败:', error);
+      return null;
+    }
+  }, [getGoalById]);
+
+  // 完成专注记录（点击完成时调用）
+  const completeFocusLog = useCallback(async (
+    logId: string | null,
+    end: number
+  ) => {
+    if (!logId) {
+      console.error('[Timer] 没有进行中的专注记录');
+      return;
+    }
+    
+    try {
+      // 获取记录以计算时长
+      const log = await db.focusLogs.get(logId);
+      if (!log) {
+        console.error('[Timer] 找不到专注记录:', logId);
+        return;
+      }
+      
+      const actualDuration = Math.floor((end - log.startTime) / 1000); // 转换为秒
+      
+      await updateFocusLogEndTime(logId, end, actualDuration);
+      
+      console.log('[Timer] 专注记录已完成:', {
+        logId,
+        endTime: end,
         duration: actualDuration,
       });
     } catch (error) {
-      console.error('[Timer] 保存专注记录失败:', error);
+      console.error('[Timer] 完成专注记录失败:', error);
     }
-  }, [getGoalById]);
+  }, []);
 
   // 设置专注目标
   const setActiveFocus = useCallback((goalId: string | null) => {
@@ -152,16 +193,19 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   // 切换专注状态
   const toggleFocus = useCallback((goalId: string) => {
     if (activeFocusIdRef.current === goalId) {
-      // 如果已经是当前专注目标，取消专注并保存记录
-      if (startTimeRef.current && isRunningRef.current) {
-        // 保存专注记录
-        saveFocusLog(goalId, startTimeRef.current, Date.now(), totalTimeRef.current);
+      // 如果已经是当前专注目标，取消专注并完成记录
+      if (currentFocusLogIdRef.current && isRunningRef.current) {
+        // 完成专注记录
+        completeFocusLog(currentFocusLogIdRef.current, Date.now());
       }
       setActiveFocusId(null);
       clearTimer();
       setIsRunning(false);
       setIsPaused(false);
       setStartTime(null);
+      startTimeRef.current = null;
+      setCurrentFocusLogId(null);
+      currentFocusLogIdRef.current = null;
       setShowBubble(false);
     } else {
       // 切换到新目标
@@ -172,8 +216,11 @@ export function TimerProvider({ children }: { children: ReactNode }) {
       setIsRunning(false);
       setIsPaused(false);
       setStartTime(null);
+      startTimeRef.current = null;
+      setCurrentFocusLogId(null);
+      currentFocusLogIdRef.current = null;
     }
-  }, [saveFocusLog]);
+  }, [completeFocusLog]);
 
   // 检查目标是否处于专注状态
   const isGoalFocused = useCallback((goalId: string) => {
@@ -181,7 +228,7 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   }, [activeFocusId]);
 
   // 开始计时 - 不使用 useCallback，直接使用函数
-  const startTimer = () => {
+  const startTimer = async () => {
     if (!isRunningRef.current && timeRemaining > 0) {
       setIsRunning(true);
       setIsPaused(false);
@@ -191,6 +238,19 @@ export function TimerProvider({ children }: { children: ReactNode }) {
         const now = Date.now();
         setStartTime(now);
         startTimeRef.current = now;
+        
+        // 创建进行中的专注记录
+        if (activeFocusIdRef.current) {
+          const logId = await createOngoingFocusLog(
+            activeFocusIdRef.current,
+            now,
+            totalTimeRef.current
+          );
+          if (logId) {
+            setCurrentFocusLogId(logId);
+            currentFocusLogIdRef.current = logId;
+          }
+        }
       }
       
       // 清除之前的计时器
@@ -204,9 +264,9 @@ export function TimerProvider({ children }: { children: ReactNode }) {
             setIsRunning(false);
             setIsPaused(false);
             
-            // 保存专注记录
-            if (activeFocusIdRef.current && startTimeRef.current) {
-              saveFocusLog(activeFocusIdRef.current, startTimeRef.current, Date.now(), totalTimeRef.current);
+            // 完成专注记录
+            if (currentFocusLogIdRef.current) {
+              completeFocusLog(currentFocusLogIdRef.current, Date.now());
             }
             
             // 触发完成回调
@@ -214,9 +274,11 @@ export function TimerProvider({ children }: { children: ReactNode }) {
               onCompleteRef.current();
             }
             
-            // 重置开始时间
+            // 重置状态
             setStartTime(null);
             startTimeRef.current = null;
+            setCurrentFocusLogId(null);
+            currentFocusLogIdRef.current = null;
             
             return 0;
           }
@@ -235,9 +297,9 @@ export function TimerProvider({ children }: { children: ReactNode }) {
 
   // 重置计时器
   const resetTimer = () => {
-    // 如果正在运行，先保存当前记录
-    if (isRunningRef.current && activeFocusIdRef.current && startTimeRef.current) {
-      saveFocusLog(activeFocusIdRef.current, startTimeRef.current, Date.now(), totalTimeRef.current);
+    // 如果正在运行，先完成当前记录
+    if (isRunningRef.current && currentFocusLogIdRef.current) {
+      completeFocusLog(currentFocusLogIdRef.current, Date.now());
     }
     
     clearTimer();
@@ -246,13 +308,15 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     setTimeRemaining(totalTime);
     setStartTime(null);
     startTimeRef.current = null;
+    setCurrentFocusLogId(null);
+    currentFocusLogIdRef.current = null;
   };
 
   // 完成计时 - 手动完成并保存记录，同时取消专注状态
   const completeTimer = () => {
-    // 保存专注记录
-    if (activeFocusIdRef.current && startTimeRef.current) {
-      saveFocusLog(activeFocusIdRef.current, startTimeRef.current, Date.now(), totalTimeRef.current);
+    // 完成专注记录
+    if (currentFocusLogIdRef.current) {
+      completeFocusLog(currentFocusLogIdRef.current, Date.now());
     }
     
     clearTimer();
@@ -261,6 +325,8 @@ export function TimerProvider({ children }: { children: ReactNode }) {
     setTimeRemaining(0);
     setStartTime(null);
     startTimeRef.current = null;
+    setCurrentFocusLogId(null);
+    currentFocusLogIdRef.current = null;
     
     // 触发完成回调
     if (onCompleteRef.current) {
@@ -302,13 +368,13 @@ export function TimerProvider({ children }: { children: ReactNode }) {
   // 组件卸载时清理
   useEffect(() => {
     return () => {
-      // 如果正在专注，保存记录
-      if (isRunningRef.current && activeFocusIdRef.current && startTimeRef.current) {
-        saveFocusLog(activeFocusIdRef.current, startTimeRef.current, Date.now(), totalTimeRef.current);
+      // 如果正在专注，完成记录
+      if (isRunningRef.current && currentFocusLogIdRef.current) {
+        completeFocusLog(currentFocusLogIdRef.current, Date.now());
       }
       clearTimer();
     };
-  }, [saveFocusLog]);
+  }, [completeFocusLog]);
 
   const value: TimerContextType = {
     activeFocusId,
