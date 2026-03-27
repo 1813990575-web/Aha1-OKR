@@ -22,7 +22,6 @@ export function RightPanel() {
     deleteGoal,
     updateGoalTitle,
     toggleGoalCompletion,
-    getGoalProgress,
     updateGoalDates,
     toggleShowDeadline,
     getDeadlineStatus,
