@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGoalStore } from '../store/goalStore';
+import { useNoteStore } from '../store/noteStore';
 import { useTimer } from './Timer/TimerProvider';
 import { MiniTimer } from './Timer/MiniTimer';
 import { TimerBubble } from './Timer/TimerBubble';
@@ -7,6 +8,7 @@ import { DatePicker } from './DatePicker';
 import { TimelineContainer } from './Timeline';
 import { ReorderableList, DragHandle } from './shared/ReorderableList';
 import type { DragHandleProps } from './shared/ReorderableList';
+import { ChatPopover } from './VisionChat/ChatPopover';
 import dayjs from 'dayjs';
 
 export function RightPanel() {
@@ -29,14 +31,23 @@ export function RightPanel() {
 
   const selectedGoal = selectedGoalId ? getGoalById(selectedGoalId) : null;
   const childGoals = selectedGoalId ? getChildGoals(selectedGoalId) : [];
-  const progress = selectedGoalId ? getGoalProgress(selectedGoalId) : { completed: 0, total: 0 };
   const deadlineStatus = selectedGoalId ? getDeadlineStatus(selectedGoalId) : null;
+
+  // Note store
+  const { getLatestNoteByGoalId, loadNotes } = useNoteStore();
+  const latestNote = selectedGoalId ? getLatestNoteByGoalId(selectedGoalId) : null;
 
   const [newGoalTitle, setNewGoalTitle] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [titleInput, setTitleInput] = useState(selectedGoal?.title || '');
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'goals' | 'time'>('goals'); // 视图模式：goals=子目标管理, time=时间统计
+
+  // 加载备注数据
+  useEffect(() => {
+    loadNotes();
+  }, []);
 
   useEffect(() => {
     if (selectedGoal) {
@@ -173,17 +184,6 @@ export function RightPanel() {
 
               {/* Meta info */}
               <div className="flex items-center gap-3 mt-2">
-                {progress.total > 0 && (
-                  <div className="flex items-center gap-1.5 text-sm text-stone-500">
-                    <div className="w-16 h-1 bg-stone-200 rounded-full overflow-hidden">
-                      <div 
-                        className="h-full bg-stone-400 rounded-full transition-all duration-300"
-                        style={{ width: `${(progress.completed / progress.total) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-[11px]">{progress.completed}/{progress.total}</span>
-                  </div>
-                )}
                 {/* 执行时间按钮 */}
                 <button 
                   onClick={() => setIsDatePickerOpen(true)}
@@ -193,6 +193,22 @@ export function RightPanel() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   {getDateDisplayText()}
+                </button>
+
+                {/* 备注图标和预览 - 简洁文本风格 */}
+                <button
+                  onClick={() => setIsChatOpen(true)}
+                  className="flex items-center gap-1.5 text-[12px] text-gray-600 hover:text-gray-800 hover:bg-gray-50 rounded px-1.5 py-0.5 transition-all duration-200 max-w-[600px]"
+                  title="查看愿景备注"
+                >
+                  <svg className="w-3.5 h-3.5 flex-shrink-0 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  {latestNote ? (
+                    <span className="truncate whitespace-nowrap overflow-hidden text-ellipsis">{latestNote.content}</span>
+                  ) : (
+                    <span className="text-gray-400">添加愿景...</span>
+                  )}
                 </button>
               </div>
             </div>
@@ -303,6 +319,14 @@ export function RightPanel() {
             }
           }
         }}
+      />
+
+      {/* Chat Popover */}
+      <ChatPopover
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        goalId={selectedGoalId}
+        goalTitle={selectedGoal.title}
       />
 
       {/* 视图切换悬浮按钮 - fixed 定位，带红色调试边框 */}

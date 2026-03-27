@@ -31,25 +31,32 @@ export interface FocusLog {
   createdAt: number;
 }
 
+// 愿景备注接口
+export interface Note {
+  id: string;
+  goalId: string;           // 关联的目标ID
+  content: string;          // 内容（文字或语音转文字）
+  type: 'text' | 'voice';   // 类型：文字/语音
+  voiceUrl?: string;        // 语音文件URL（语音类型时）
+  duration?: number;        // 语音时长（秒）
+  createdAt: number;        // 创建时间
+  updatedAt: number;        // 更新时间
+}
+
 // 数据库类
 export class AhaOKRDatabase extends Dexie {
   goals!: Table<Goal>;
   focusLogs!: Table<FocusLog>;
+  notes!: Table<Note>;
 
   constructor() {
     super('AhaOKRDatabase');
     
-    // 版本 5：添加 sortOrder 字段
-    this.version(5).stores({
+    // 版本 6：添加 notes 表
+    this.version(6).stores({
       goals: 'id, parentId, isSplit, isCompleted, startDate, endDate, showDeadline, sortOrder, createdAt, updatedAt',
-      focusLogs: 'id, goalId, startTime, endTime, [goalId+startTime], [startTime+endTime]'
-    }).upgrade(tx => {
-      // 为现有数据添加默认 sortOrder
-      return tx.table('goals').toCollection().modify(goal => {
-        if (goal.sortOrder === undefined) {
-          goal.sortOrder = goal.createdAt;
-        }
-      });
+      focusLogs: 'id, goalId, startTime, endTime, [goalId+startTime], [startTime+endTime]',
+      notes: 'id, goalId, createdAt, updatedAt, [goalId+createdAt]'
     });
   }
 }

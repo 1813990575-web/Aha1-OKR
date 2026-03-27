@@ -24,7 +24,7 @@ export function SidebarRail({ activeItem = 'focus', onItemClick }: SidebarRailPr
       <div className="h-8 w-full" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
 
       {/* Main Menu Items */}
-      <nav className="flex-1 flex flex-col items-center gap-1 w-full px-2">
+      <nav className="flex-1 flex flex-col items-center gap-4 w-full px-2">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeItem === item.id;
@@ -34,15 +34,15 @@ export function SidebarRail({ activeItem = 'focus', onItemClick }: SidebarRailPr
               onClick={() => onItemClick?.(item.id)}
               className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 group relative ${
                 isActive
-                  ? 'bg-stone-800 text-white shadow-sm'
-                  : 'text-stone-500 hover:bg-stone-200/60 hover:text-stone-700'
+                  ? 'text-stone-800'
+                  : 'text-stone-400 hover:bg-stone-200/60 hover:text-stone-600'
               }`}
               title={item.label}
             >
               <Icon className="w-5 h-5" />
-              {/* Active indicator dot */}
+              {/* Active indicator dot - 红色圆点 */}
               {isActive && (
-                <span className="absolute -bottom-0.5 w-1 h-1 bg-red-500 rounded-full" />
+                <span className="absolute -bottom-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
               )}
             </button>
           );
@@ -58,14 +58,18 @@ export function SidebarRail({ activeItem = 'focus', onItemClick }: SidebarRailPr
             <button
               key={item.id}
               onClick={() => onItemClick?.(item.id)}
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 ${
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-200 relative ${
                 isActive
-                  ? 'bg-stone-800 text-white shadow-sm'
-                  : 'text-stone-500 hover:bg-stone-200/60 hover:text-stone-700'
+                  ? 'text-stone-800'
+                  : 'text-stone-400 hover:bg-stone-200/60 hover:text-stone-600'
               }`}
               title={item.label}
             >
               <Icon className="w-5 h-5" />
+              {/* Active indicator dot - 红色圆点 */}
+              {isActive && (
+                <span className="absolute -bottom-1 w-1.5 h-1.5 bg-red-500 rounded-full" />
+              )}
             </button>
           );
         })}

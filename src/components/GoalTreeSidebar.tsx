@@ -318,9 +318,11 @@ function GoalTreeNode({
             text-left flex-1 truncate whitespace-nowrap overflow-hidden text-xs
             ${isMiddleMode
               ? isRoot
-                ? 'text-stone-800 font-medium'  // 父目标：深色
+                ? 'text-stone-800 font-semibold'  // 父目标：深色加粗
                 : 'text-stone-400'              // 子任务：浅灰色
-              : 'text-stone-600'
+              : isRoot
+                ? 'text-stone-800 font-semibold'  // 侧边栏模式父目标也加粗
+                : 'text-stone-600'
             }
             ${isSelected ? 'font-medium' : ''}
           `}
