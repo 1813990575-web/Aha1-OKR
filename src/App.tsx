@@ -5,6 +5,7 @@ import { SidebarRail } from './components/SidebarRail';
 import { GoalTreeSidebar } from './components/GoalTreeSidebar';
 import { RightPanel } from './components/RightPanel';
 import { Splitter } from './components/shared/Splitter';
+import { TitleBar } from './components/TitleBar';
 
 function App() {
   const { loadGoals, getSplitGoals } = useGoalStore();
@@ -71,20 +72,25 @@ function App() {
 
   return (
     <TimerProvider>
-      <div className="relative h-screen w-screen flex bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden" ref={containerRef}>
-        {/* SidebarRail - 一级功能侧边栏 */}
-        <SidebarRail />
+      <div className="relative h-screen w-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden" ref={containerRef}>
+        {/* TitleBar - 自定义标题栏（包含版本号） */}
+        <TitleBar />
 
-        {/* Middle Panel - 目标目录树（二级目录） */}
-        <GoalTreeSidebar mode="middle" width={middlePanelWidth} />
+        <div className="flex flex-1 overflow-hidden">
+          {/* SidebarRail - 一级功能侧边栏 */}
+          <SidebarRail />
 
-        {/* Resizer - 可拖拽分隔条 */}
-        {hasSplitGoals && (
-          <Splitter isResizing={isResizing} onResizeStart={handleResizeStart} />
-        )}
+          {/* Middle Panel - 目标目录树（二级目录） */}
+          <GoalTreeSidebar mode="middle" width={middlePanelWidth} />
 
-        {/* Right Panel - Main workspace（三级主工作区） */}
-        <RightPanel />
+          {/* Resizer - 可拖拽分隔条 */}
+          {hasSplitGoals && (
+            <Splitter isResizing={isResizing} onResizeStart={handleResizeStart} />
+          )}
+
+          {/* Right Panel - Main workspace（三级主工作区） */}
+          <RightPanel />
+        </div>
       </div>
     </TimerProvider>
   );
