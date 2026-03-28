@@ -1,7 +1,7 @@
 {
   "name": "Aha1-OKR",
   "private": true,
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
@@ -30,13 +30,6 @@
     "mac": {
       "target": [
         {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        },
-        {
           "target": "zip",
           "arch": [
             "x64",
@@ -45,7 +38,7 @@
         }
       ],
       "category": "public.app-category.productivity",
-      "hardenedRuntime": true,
+      "hardenedRuntime": false,
       "gatekeeperAssess": false
     },
     "publish": {

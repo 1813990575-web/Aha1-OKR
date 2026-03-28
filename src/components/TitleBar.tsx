@@ -12,7 +12,7 @@ declare global {
 
 export function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
-  const [version, setVersion] = useState('v1.0.6');
+  const [version, setVersion] = useState('v1.0.7');
   const [hasUpdate, setHasUpdate] = useState(false);
   const [updateVersion, setUpdateVersion] = useState('');
 
